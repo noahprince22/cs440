@@ -36,8 +36,3 @@ maze_walkable_bool = [[is_walkable(x, y) for x in range(0,maze_width)] for y in 
 
 # Create 2d array of undiscovered areas
 discovered_maze = [[(x,y) for x in range(0,maze_width)] for y in range(0,maze_height)]
-
-print "sha la la"
-
-state = start
-#while state is not goal:
