@@ -1,4 +1,3 @@
-import graph
 import logging
 import sys
 logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
@@ -35,6 +34,10 @@ goal = find(".")
 
 maze_walkable_bool = [[is_walkable(x, y) for x in range(0,maze_width)] for y in range(0,maze_height)]
 
-state = start
+# Create 2d array of undiscovered areas
+discovered_maze = [[(x,y) for x in range(0,maze_width)] for y in range(0,maze_height)]
 
-#while state is not goal
+print "sha la la"
+
+state = start
+#while state is not goal:
