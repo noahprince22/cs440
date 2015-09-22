@@ -27,64 +27,219 @@ def manhattan_distance(begin, end):
     y = abs(begin[1] - end[1])
     return (x + y)
 
-def dfs(goal, walkable_maze, x, y):
-    if walkable_maze[y][x] == False or not anyone_home_at(x,y):
+def dfs(goal, penalties, x, y, current_penalty):
+    if current_penalty >= penalties[y][x]:
         return None
+    else:
+        penalties[y][x] = current_penalty
         
     if goal[0] == x and goal[1] == y:
         return []
-    
-    walkable_maze[y][x] = False
 
-    paths = [explore(goal, walkable_maze, x, y, 'l'),
-             explore(goal, walkable_maze, x, y, 'r'),
-             explore(goal, walkable_maze, x, y, 'u'),
-             explore(goal, walkable_maze, x, y, 'd')]
+    paths = [explore(goal, penalties, x, y, current_penalty, 'l'),
+             explore(goal, penalties, x, y, current_penalty, 'r'),
+             explore(goal, penalties, x, y, current_penalty, 'u'),
+             explore(goal, penalties, x, y, current_penalty, 'd')]
 
     # Get the shortest path
-    path = []
     minlength = sys.maxint
+    path = None
     for p in paths:
         if p is not None and len(p) < minlength:
-            minlength = len(p)
             path = p
+            minlength = len(p)
     
-    walkable_maze[y][x] = True
-
     return path
 
-def explore(goal, walkable_maze, x, y, direction):
+def explore(goal, walkable_maze, x, y, current_penalty, direction):
     if direction == 'r':
-        x+=1
-    elif direction == 'l':
         x-=1
+    elif direction == 'l':
+        x+=1
     elif direction == 'u':
-        y+=1
-    elif direction == 'd':
         y-=1
+    elif direction == 'd':
+        y+=1
 
-    result = dfs(goal, walkable_maze, x, y)
+    path = dfs(goal, walkable_maze, x, y, current_penalty + 1)
 
-    if result is None:
+    if path is None:
         return None
+    
+    path.append(direction)
+    return path
 
-    print "%s %s %s %s" % (x, y, direction, result)
+def direction_to_int(direction):
+    if direction == 'l':
+        return 0
+    if direction == 'r':
+        return 1
+    if direction == 'u':
+        return 2
+    if direction == 'd':
+        return 3
 
-    result.append(direction)
+# Each of penalties needs to encompass every state at that point, so we must include current direction
+def dfs_direction(goal, penalties, x, y, direction, current_penalty):
+    index = direction_to_int(direction)
+    
+    if current_penalty >= penalties[y][x][index]:
+        return None
+    else:
+        penalties[y][x][index] = current_penalty
+        
+    if goal[0] == x and goal[1] == y:
+        return []
 
-    return result
+    paths = [explore_turns(goal, penalties, x, y, direction, current_penalty, 'f'),
+             explore_turns(goal, penalties, x, y, direction, current_penalty, 'l'),
+             explore_turns(goal, penalties, x, y, direction, current_penalty, 'r')]
 
+    # Get the shortest path
+    minlength = sys.maxint
+    path = None
+    for p in paths:
+        if p is not None and len(p) < minlength:
+            path = p
+            minlength = len(p)
+    
+    return path
 
-maze = [list(char for char in line.rstrip('\n')) for line in open('maze.txt')]
+def explore_turns(goal, penalties, x, y, direction, current_penalty, action):
+    # Forward in current direction
+    if action == 'f':
+        if direction == 'l':
+            x-=1
+        elif direction == 'r':
+            x+=1
+        elif direction == 'u':
+            y-=1
+        elif direction == 'd':
+            y+=1
+
+    # Turn 90 degrees left
+    elif action == 'l':
+        if direction == 'l':
+            direction = 'd'
+        elif direction == 'r':
+            direction = 'u'
+        elif direction == 'u':
+            direction = 'l'
+        elif direction == 'd':
+            direction = 'r'
+
+    # Turn 90 degrees right
+    elif action == 'r':
+        if direction == 'l':
+            direction = 'u'
+        elif direction == 'r':
+            direction = 'd'
+        elif direction == 'u':
+            direction = 'r'
+        elif direction == 'd':
+            direction = 'l'
+
+    path = dfs_direction(goal, penalties, x, y, direction, current_penalty + 1)
+
+    if path is None:
+        return None
+    
+    path.append(action)
+    return path
+
+maze = [list(char for char in line.rstrip('\n')) for line in open('openmaze.txt')]
 maze_width = len(maze[0])
 maze_height = len(maze)
 start = find("P")
 goal = find(".")
 
-maze_walkable_bool = [[is_walkable(x, y) for x in range(0,maze_width)] for y in range(0,maze_height)]
+maze_walkable_bool = [[[is_walkable(x, y) for x in range(0,maze_width)] for y in range(0,maze_height)]]
 
-print maze_walkable_bool
+# Test dfs regular
+# penalties = [[sys.maxint if is_walkable(x,y) else 0 for x in range (0, maze_width)] for y in range(0, maze_height)]
+# path = dfs(goal, penalties, start[0], start[1], 0)
 
-path = dfs(goal, maze_walkable_bool, start[0], start[1])
+# x = goal[0]
+# y = goal[1]
+
+# test_maze = list(maze)
+
+# for z in test_maze:
+#     for k in z:
+#         print k,
+
+#     print
+
+# i = 0
+# for p in path:
+#     if p == 'u':
+#         y+=1
+#     elif p == 'd':
+#         y-=1
+#     elif p == 'l':
+#         x-=1
+#     elif p == 'r':
+#         x+=1
+
+#     i +=1
+#     test_maze[y][x] = 'o'
+
+# for x in test_maze:
+#     for y in x:
+#         print y,
+
+#     print
+
+
+# Test for directional dfs
+sys.setrecursionlimit(10000)
+penalties = [[[sys.maxint if is_walkable(x,y) else 0 for z in range (0,4)] for x in range (0, maze_width)] for y in range(0, maze_height)] 
+path = dfs_direction(goal, penalties, start[0], start[1], 'u', 0)
 print path
+
+test_maze = list(maze)
+
+direction = 'u'
+x = start[0]
+y = start[1]
+path.reverse()
+for action in path:
+    if action == 'f':
+        if direction == 'l':
+            x-=1
+        elif direction == 'r':
+            x+=1
+        elif direction == 'u':
+            y-=1
+        elif direction == 'd':
+            y+=1
+
+    elif action == 'l':
+        if direction == 'l':
+            direction = 'd'
+        elif direction == 'r':
+            direction = 'u'
+        elif direction == 'u':
+            direction = 'l'
+        elif direction == 'd':
+            direction = 'r'
+
+    elif action == 'r':
+            if direction == 'l':
+                direction = 'u'
+            elif direction == 'r':
+                direction = 'd'
+            elif direction == 'u':
+                direction = 'r'
+            elif direction == 'd':
+                direction = 'l'
+
+    test_maze[y][x] = 'o'
+
+
+for x in test_maze:
+    for y in x:
+        print y,
+
+    print
 
