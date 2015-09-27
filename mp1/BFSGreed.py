@@ -2,6 +2,7 @@ import logging
 import sys
 import Queue
 import numpy
+import math
 logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
 
 # logging: log events for debugging and review, NOT for final output
@@ -24,7 +25,10 @@ def find(char):
                 # "+1" accounting for x,y starting at 0
 
 def is_walkable(x, y):
-    if maze[y][x] in [' ','.','P']:
+    if anyone_home_at(x,y) == False:
+        return False
+    
+    if maze[y][x] in [' ','.','P', 'G', 'g']:
         return True
     else: return False
 
@@ -57,7 +61,8 @@ def set_parent(child, parent):
 def manhattan_distance(begin, end):
     x = abs(begin[0] - end[0])
     y = abs(begin[1] - end[1])
-    return (x + y)
+    
+    return x + y
 
 def penalty(walking_to, walking_from, orientation):
     # orientation := initial orientation
@@ -72,6 +77,15 @@ def penalty(walking_to, walking_from, orientation):
 
     return penalty
 
+def get_wall_density():
+    total = 0
+    for y in maze:
+        for x in y:
+            if x in ["%", "G", "g"]:
+                total+=1
+
+    return float(total)/(maze_width * maze_height)
+
 def setup(filename):
     global maze
     global maze_width
@@ -81,6 +95,7 @@ def setup(filename):
     global maze_walkable_bool
     global discovered_maze
     global parents_maze
+    global wall_density
     maze = [list(char for char in line.rstrip('\n')) for line in open(filename)]
     maze_width = len(maze[0])
     maze_height = len(maze)
@@ -89,6 +104,7 @@ def setup(filename):
     maze_walkable_bool = [[is_walkable(x, y) for x in range(0,maze_width)] for y in range(0,maze_height)]
     discovered_maze = [[False for x in range(0,maze_width)] for y in range(0,maze_height)]
     parents_maze = [[None for x in range(0,maze_width)] for y in range(0,maze_height)]
+    wall_density = get_wall_density()
 
 def retrace():
     # trace way home
@@ -127,6 +143,33 @@ def retrace():
         sys.stdout.write("\n")
 
 
+def DFS(filename):
+    setup(filename)
+    s = Queue.LifoQueue()
+    s.put(start)
+
+    while s.qsize() is not 0:
+        u = s.get() #dequeue
+        
+        # for all neighbors: 1. adjacent, 2. unexplored
+        for neighbor in get_neighbors(u[0],u[1]):
+            s.put(neighbor)
+            set_parent(neighbor, u)
+        make_discovered(u[0],u[1])
+
+        if u[0] == goal[0] and u[1] == goal[1]:
+            return True
+        
+    return False        
+
+def run_DFS(filename):
+    if DFS(filename) is True:
+        print "yay"
+        retrace()
+        print "Depth-First Search:"
+    else:
+        print "nay"
+        
 def BFS(filename):
     setup(filename)
     q = Queue.Queue()
@@ -182,16 +225,16 @@ def run_Greedy(filenamep, penalize=False):
 def A_Star(filename):
     setup(filename)
     q = Queue.PriorityQueue()
-    q.put((0, start))
-    distance_travelled = 0
+    q.put((0, start, 0))
 
     while q.qsize() is not 0:
-        u = q.get()[1] #dequeue
-        distance_travelled = distance_travelled + 1
+        element = q.get()
+        u = element[1] #dequeue
+        distance_travelled =  element[2] + 1
 
         # for all neighbors: 1. adjacent, 2. unexplored
         for neighbor in get_neighbors(u[0],u[1]):
-            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor))
+            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor, distance_travelled))
             set_parent(neighbor, u)
         make_discovered(u[0],u[1])
 
@@ -199,7 +242,7 @@ def A_Star(filename):
             return True
     return False
 
-def run_Greedy(filename):
+def run_A_Star(filename):
     if A_Star(filename) is True:
         print "yay"
         print "A* Search:"
@@ -207,5 +250,137 @@ def run_Greedy(filename):
     else:
         print "nay"
 
-run_Greedy("maze.txt")
+# True if there is no ghost at x, y
+def no_ghost(x, y, ghost):
+    theres_a_ghost = (x == ghost[0] and y == ghost[1])
+    return not theres_a_ghost
+
+
+
+def get_neighbors_ghost(x, y, ghost):
+    neighbors = []
+    # find the right neighbor
+    if is_walkable(x+1, y) and is_undiscovered(x+1, y) and no_ghost(x+1, y, ghost):
+        neighbors.append((x+1, y))
+    if is_walkable(x-1, y) and is_undiscovered(x-1, y) and no_ghost(x-1, y, ghost):
+        neighbors.append((x-1, y))
+    if is_walkable(x, y+1) and is_undiscovered(x, y+1) and no_ghost(x, y+1, ghost):
+        neighbors.append((x, y+1))
+    if is_walkable(x, y-1) and is_undiscovered(x, y-1) and no_ghost(x, y-1, ghost):
+        neighbors.append((x, y-1))
+    return neighbors
+
+def A_Star_Ghost(filename):
+    setup(filename)
+    ghost = find("G")
+    dir_ghost = "r"
+    q = Queue.PriorityQueue()
+    q.put((0, start, 0, ghost, dir_ghost))
+
+    nodes_expanded = 0
+    
+    while q.qsize() is not 0:
+        nodes_expanded+=1
+        
+        element = q.get()
+        u = element[1] #dequeue
+        distance_travelled =  element[2] + 1
+        ghost = element[3]
+        ghost_dir = element[4]
+
+        # Move the ghost
+        x = ghost[0]
+        y = ghost[1]
+
+        if dir_ghost == 'r':
+            if is_walkable(x+1, y):
+                ghost = (x+1, y)
+        else:
+            dir_ghost = 'l'
+            ghost = (x-1, y)
+            
+        if dir_ghost == 'l':
+            if is_walkable(x-1, y):
+                ghost = (x-1, y)
+        else:
+            dir_ghost = 'r'
+            ghost = (x+1, y)
+
+        # for all neighbors: 1. adjacent, 2. unexplored
+        # note + tuple() creates a deep copy, which we need to preserve state
+        # same with the string
+        for neighbor in get_neighbors_ghost(u[0],u[1], ghost):
+            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+            set_parent(neighbor, u)
+            make_discovered(u[0],u[1])
+
+        if u[0] == goal[0] and u[1] == goal[1]:
+            print "NODES EXPANDED: %s" % nodes_expanded
+            print "WALL DENSITY: %s" % wall_density
+            return True
+    return False
+
+def run_A_Star_Ghost(filename):
+    if A_Star_Ghost(filename) is True:
+        print "yay"
+        print "A* Search WITH ghost:"
+        retrace()
+    else:
+        print "nay"
+
+def A_Star_Hardmode_Ghost(filename):
+    setup(filename)
+    ghost = find("G")
+    dir_ghost = "r"
+    q = Queue.PriorityQueue()
+    q.put((0, start, 0, ghost, dir_ghost))
+
+    nodes_expanded = 0
+    
+    while q.qsize() is not 0:
+        nodes_expanded+=1
+        
+        element = q.get()
+        u = element[1] #dequeue
+        distance_travelled =  element[2] + 1
+        ghost = element[3]
+        ghost_dir = element[4]
+
+        # Move the ghost
+        # In this implementation, the ghost chases pacman 
+        ghost_neighbors = get_neighbors(ghost[0], ghost[1])
+        min_distance = sys.maxint
+        min_neighbor = ghost_neighbors[0]
+        for neighbor in ghost_neighbors:
+            if manhattan_distance(neighbor, u) < min_distance:
+                min_distance = manhattan_distance(neighbor, u)
+                min_neighbor = neighbor
+
+        ghost = min_neighbor        
+        
+        # for all neighbors: 1. adjacent, 2. unexplored
+        # note + tuple() creates a deep copy, which we need to preserve state
+        # same with the string
+        for neighbor in get_neighbors_ghost(u[0],u[1], ghost):
+            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+            set_parent(neighbor, u)
+            make_discovered(u[0],u[1])
+
+        if u[0] == goal[0] and u[1] == goal[1]:
+            print "NODES EXPANDED: %s" % nodes_expanded
+            print "WALL DENSITY: %s" % wall_density
+            return True
+    return False
+
+def run_A_Star_Hardmode_Ghost(filename):
+    if A_Star_Hardmode_Ghost(filename) is True:
+        print "yay"
+        print "A* Search WITH ghost:"
+        retrace()
+    else:
+        print "nay"
+
+run_A_Star_Hardmode_Ghost("ghostbig.txt")
 
