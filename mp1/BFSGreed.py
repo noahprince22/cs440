@@ -131,24 +131,29 @@ def retrace():
     print "-" * maze_width
 
     print "... BUT THERE IS BUT ONE TRUE PATH!!!"
-
+    
+    cost = 0
     for y in range(0, maze_height):
         for x in range(0, maze_width):
             if is_walkable(x,y) is False:
                 sys.stdout.write("%")
             elif (x, y) in path:
                 sys.stdout.write(".")
+                cost+=1
             else:
                 sys.stdout.write(" ")
         sys.stdout.write("\n")
 
+    print "Total cost: %s" % cost
 
 def DFS(filename):
     setup(filename)
     s = Queue.LifoQueue()
     s.put(start)
 
+    num_expanded = 0
     while s.qsize() is not 0:
+        num_expanded+=1
         u = s.get() #dequeue
         
         # for all neighbors: 1. adjacent, 2. unexplored
@@ -158,8 +163,9 @@ def DFS(filename):
         make_discovered(u[0],u[1])
 
         if u[0] == goal[0] and u[1] == goal[1]:
+            print "Expanded %s" % num_expanded
             return True
-        
+
     return False        
 
 def run_DFS(filename):
@@ -175,7 +181,9 @@ def BFS(filename):
     q = Queue.Queue()
     q.put(start)
 
+    num_expanded = 0
     while q.qsize() is not 0:
+        num_expanded+=1
         u = q.get() #dequeue
 
         # for all neighbors: 1. adjacent, 2. unexplored
@@ -185,6 +193,7 @@ def BFS(filename):
         make_discovered(u[0],u[1])
 
         if u[0] == goal[0] and u[1] == goal[1]:
+            print "Expanded %s" % num_expanded
             return True
     return False
 
@@ -201,7 +210,9 @@ def Greedy(filename, penalize):
     q = Queue.PriorityQueue()
     q.put((0, start))
 
+    num_expanded = 0
     while q.qsize() is not 0:
+        num_expanded+=1
         u = q.get()[1] #dequeue
 
         # for all neighbors: 1. adjacent, 2. unexplored
@@ -211,10 +222,11 @@ def Greedy(filename, penalize):
         make_discovered(u[0],u[1])
 
         if u[0] == goal[0] and u[1] == goal[1]:
+            print "Expanded %s" % num_expanded
             return True
     return False
 
-def run_Greedy(filenamep, penalize=False):
+def run_Greedy(filename, penalize=False):
     if Greedy(filename, penalize) is True:
         print "yay"
         print "Greedy Best-First Search:"
@@ -382,5 +394,5 @@ def run_A_Star_Hardmode_Ghost(filename):
     else:
         print "nay"
 
-run_A_Star_Hardmode_Ghost("ghostbig.txt")
+run_Greedy("openmaze.txt")
 
