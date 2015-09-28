@@ -166,14 +166,14 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0)
     new_direction = where_you_walking(walking_to, walking_from)
     turns = how_many_turns(initial_orientation, new_direction)
     if alternate_scheme == 0:
-        sys.stdout.write(str(turns + 1))
+        #sys.stdout.write(str(turns + 1))
         return turns + 1, new_direction
     elif alternate_scheme == 1:
-        sys.stdout.write(str(2*turns + 1))
-        return 2*turns + 1, new_direction
-    elif alternate_scheme == 2:
-        sys.stdout.write(str(turns + 2))
+        #sys.stdout.write(str(turns + 2))
         return turns + 2, new_direction
+    elif alternate_scheme == 2:
+        #sys.stdout.write(str(2*turns + 1))
+        return 2*turns + 1, new_direction
     else:
         print "ERROR. Don't be dumb. Check the penalty function."
     # 1 point penalty per turn, so no need to modify.
@@ -186,6 +186,24 @@ def get_wall_density():
                 total+=1
 
     return float(total)/(maze_width * maze_height)
+
+def get_wall_density(start_vertex, goal_vertex):
+    """
+    :param start_vertex: Point namedtuple
+    :param goal_vertex: Point namedtuple
+    :return: float
+    """
+    total = 0
+    for y in range(start_vertex.y, goal_vertex.y):
+        for x in range(start_vertex.x, goal_vertex.x):
+            if maze[y][x] is "%":
+                total+=1
+    area = abs((start_vertex.y - goal_vertex.y) * (start_vertex.x * goal_vertex.x))
+    if area is not 0:
+        print float(total) / area
+        return float(total) / area
+    else:
+        return 0
 
 def setup(filename):
     """
@@ -600,20 +618,20 @@ def A_Star_with_turns(filename, alternate_scheme, alternate_heuristic):
         #distance_travelled = distance_travelled + 1
         distance_travelled = next_up[3] + 1
 
+        if u.x == goal.x and u.y == goal.y:
+            return True
+
         # for all neighbors: 1. adjacent, 2. unexplored
         for neighbor in get_neighbors(u.x, u.y):
             turn_penalty, new_orientation = penalty(u, neighbor, old_orientation, alternate_scheme)
             if alternate_heuristic is False:
                 q.put( (manhattan_distance(neighbor, goal) + distance_travelled + turn_penalty, neighbor, new_orientation, distance_travelled))
             else: # else alternate_heuristic is True, then use different heuristic from the Manhattan distance once
-                q.put( (manhattan_distance(neighbor, goal) + distance_travelled + turn_penalty, neighbor, new_orientation))
+                q.put( ( 2*(get_wall_density(neighbor, goal))*(manhattan_distance(neighbor, goal) + distance_travelled) + turn_penalty, neighbor, new_orientation, distance_travelled))
             set_parent(neighbor, u)
             turn_penalty_maze[u.y][u.x] = turn_penalty
             direction_maze[neighbor.y][neighbor.x] = new_orientation
         make_discovered(u.x, u.y)
-
-        if u.x == goal.x and u.y == goal.y:
-            return True
     return False
 
 def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristic = False):
@@ -629,13 +647,11 @@ def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristi
 #run_Greedy("maze.txt", False)
 #run_Greedy("maze.txt", True)
 
-#run_A_Star("bigmaze_for_turns.txt", True, 1)
+#run_A_Star("smallmaze.txt", True, 1, False)
 #run_A_Star("smallmaze.txt", True, 2)
 
-#run_A_Star("maze.txt", True)
-#run_A_Star("bigmaze_for_turns.txt", True, 2)
-#run_A_Star("maze.txt", False)
-
+#run_A_Star("bigmaze_for_turns.txt", True, 2, True)
+run_A_Star("bigmaze_for_turns.txt", True, 2, True)
 #run_BFS("maze.txt")
 
 run_A_Star_Hardmode_Ghost("ghostmedium.txt")
