@@ -145,7 +145,7 @@ def manhattan_distance(begin, end):
     return (x + y)
 
 
-def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0):
+def penalty(walking_to, walking_from, initial_orientation, alternate_scheme):
     # when alternate_scheme is 0: move forward cost si 1, turn cost is 1
     # when alternate_scheme is 1: move forward cost is 1, turn cost is 2
     # when alternate_scheme is 2: move forward cost is 2, turn cost is 1
@@ -203,11 +203,11 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0)
         sys.stdout.write(str(turns + 1))
         return turns + 1, new_direction
     elif alternate_scheme == 1:
-        sys.stdout.write(str(turns + 2))
-        return turns + 2, new_direction
-    elif alternate_scheme == 2:
         sys.stdout.write(str(2*turns + 1))
         return 2*turns + 1, new_direction
+    elif alternate_scheme == 2:
+        sys.stdout.write(str(turns + 2))
+        return turns + 2, new_direction
     else:
         print "ERROR. Don't be dumb. Check the penalty function."
     # 1 point penalty per turn, so no need to modify.
@@ -443,7 +443,7 @@ def A_Star_with_turns(filename, alternate_scheme, alternate_heuristic):
             else: # else alternate_heuristic is True, then use different heuristic from the Manhattan distance once
                 q.put( (manhattan_distance(neighbor, goal) + distance_travelled + turn_penalty, neighbor, new_orientation))
             set_parent(neighbor, u)
-            turn_penalty_maze[neighbor.y][neighbor.x] = turn_penalty
+            turn_penalty_maze[u.y][u.x] = turn_penalty
             direction_maze[neighbor.y][neighbor.x] = new_orientation
         make_discovered(u.x, u.y)
 
@@ -464,7 +464,9 @@ def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristi
 #run_Greedy("maze.txt", False)
 #run_Greedy("maze.txt", True)
 
-run_A_Star("bigmaze_for_turns.txt", True, 2)
+#run_A_Star("bigmaze_for_turns.txt", True, 1)
+run_A_Star("smallmaze.txt", True, 2)
+
 #run_A_Star("maze.txt", True)
 
 """
