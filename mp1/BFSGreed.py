@@ -1,4 +1,9 @@
 import logging
+import sys
+import Queue
+import numpy
+import math
+logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
 # logging: log events for debugging and review, NOT for final output
 
 import sys
@@ -15,48 +20,6 @@ import collections
 Point = collections.namedtuple('Point', 'x y')
 
 logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
-# used for debugging and testing. Rationale: archived progress.
-
-"""
-quu..__
- $$$b  `---.__
-  "$$b        `--.                          ___.---uuudP
-   `$$b           `.__.------.__     __.---'      $$$$"              .
-     "$b          -'            `-.-'            $$$"              .'|
-       ".                                       d$"             _.'  |
-         `.   /                              ..."             .'     |
-           `./                           ..::-'            _.'       |
-            /                         .:::-'            .-'         .'
-           :                          ::''\          _.'            |
-          .' .-.             .-.           `.      .'               |
-          : /'$$|           .@"$\           `.   .'              _.-'
-         .'|$u$$|          |$$,$$|           |  <            _.-'
-         | `:$$:'          :$$$$$:           `.  `.       .-'
-         :                  `"--'             |    `-.     \
-        :##.       ==             .###.       `.      `.    `\
-        |##:                      :###:        |        >     >
-        |#'     `..'`..'          `###'        x:      /     /
-         \                                      xXX|     /    ./
-          \                                xXXX'|    /   ./
-          /`-.                                  `.  /   /
-         :    `-  ...........,                   | /  .'
-         |         ``:::::::'       .            |<    `.
-         |             ```          |           x| \ `.:``.
-         |                         .'    /'   xXX|  `:`M`M':.
-         |    |                    ;    /:' xXXX'|  -'MMMMM:'
-         `.  .'                   :    /:'       |-'MMMM.-'
-          |  |                   .'   /'        .'MMM.-'
-          `'`'                   :  ,'          |MMM<
-            |                     `'            |tbap\
-             \                                  :MM.-'
-              \                 |              .''
-               \.               `.            /
-                /     .:::::::.. :           /
-               |     .:::::::::::`.         /
-               |   .:::------------\       /
-              /   .''               >::'  /
-              `',:                 :    .'
-"""
 
 def anyone_home_at(x,y):
     """
@@ -87,7 +50,11 @@ def is_walkable(x, y):
     :param y: int
     :return: boolean
     """
-    if maze[y][x] in [' ','.','P']:
+    
+    if anyone_home_at(x,y) == False:
+        return False
+    
+    if maze[y][x] in [' ','.','P', 'G', 'g']:
         return True
     else: return False
 
@@ -144,8 +111,7 @@ def manhattan_distance(begin, end):
     y = abs(begin.y - end.y)
     return (x + y)
 
-
-def penalty(walking_to, walking_from, initial_orientation, alternate_scheme):
+def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0):
     # when alternate_scheme is 0: move forward cost si 1, turn cost is 1
     # when alternate_scheme is 1: move forward cost is 1, turn cost is 2
     # when alternate_scheme is 2: move forward cost is 2, turn cost is 1
@@ -212,6 +178,15 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme):
         print "ERROR. Don't be dumb. Check the penalty function."
     # 1 point penalty per turn, so no need to modify.
 
+def get_wall_density():
+    total = 0
+    for y in maze:
+        for x in y:
+            if x in ["%", "G", "g"]:
+                total+=1
+
+    return float(total)/(maze_width * maze_height)
+
 def setup(filename):
     """
     :param filename: string, ex: "maze.txt"
@@ -274,16 +249,20 @@ def retrace(turns = False):
     print "-" * maze_width
 
     print "... BUT THERE IS BUT ONE TRUE PATH!!!"
-
+    
+    cost = 0
     for y in range(0, maze_height):
         for x in range(0, maze_width):
             if is_walkable(x,y) is False:
                 sys.stdout.write("%")
             elif (x, y) in path:
                 sys.stdout.write(".")
+                cost+=1
             else:
                 sys.stdout.write(" ")
         sys.stdout.write("\n")
+
+    print "Total cost: %s" % cost
 
     if turns is True:
         print "-" * maze_width
@@ -320,22 +299,54 @@ def retrace(turns = False):
                     sys.stdout.write(" ")
             sys.stdout.write("\n")
 
+def DFS(filename):
+    setup(filename)
+    s = Queue.LifoQueue()
+    s.put(start)
 
+    num_expanded = 0
+    while s.qsize() is not 0:
+        num_expanded+=1
+        u = s.get() #dequeue
+        
+        # for all neighbors: 1. adjacent, 2. unexplored
+        for neighbor in get_neighbors(u.x,u.y):
+            s.put(neighbor)
+            set_parent(neighbor, u)
+        make_discovered(u.x,u.y)
+
+        if u.x == goal.x and u.y == goal.y:
+            print "Expanded %s" % num_expanded
+            return True
+
+    return False
+
+def run_DFS(filename):
+    if DFS(filename) is True:
+        print "yay"
+        retrace()
+        print "Depth-First Search:"
+    else:
+        print "nay"
+        
 def BFS(filename):
     setup(filename)
     q = Queue.Queue()
     q.put(start)
 
+    num_expanded = 0
     while q.qsize() is not 0:
+        num_expanded+=1
         u = q.get() #dequeue
 
         # for all neighbors: 1. adjacent, 2. unexplored
-        for neighbor in get_neighbors(u[0],u[1]):
+        for neighbor in get_neighbors(u.x,u.y):
             q.put(neighbor)
             set_parent(neighbor, u)
-        make_discovered(u[0],u[1])
+        make_discovered(u.x,u.y)
 
         if u.x == goal.x and u.y == goal.y:
+            print "Expanded %s" % num_expanded
             return True
     return False
 
@@ -352,8 +363,10 @@ def Greedy(filename):
     q = Queue.PriorityQueue()
     q.put((0, start))
 
+    num_expanded = 0
     while q.qsize() is not 0:
-        u = q.get()[1]
+        num_expanded+=1
+        u = q.get()[1] #dequeue
         # dequeue. u := Currently selected node
 
         # for all neighbors: 1. adjacent, 2. unexplored
@@ -363,6 +376,7 @@ def Greedy(filename):
         make_discovered(u.x,u.y)
 
         if u.x == goal.x and u.y == goal.y:
+            print "Expanded %s" % num_expanded
             return True
     return False
 
@@ -385,6 +399,7 @@ def Greedy_with_turns(filename):
         make_discovered(u.x, u.y)
 
         if u.x == goal.x and u.y == goal.y:
+            print "Expanded %s" % num_expanded
             return True
     return False
 
@@ -417,6 +432,145 @@ def A_Star(filename):
         if u.x == goal.x and u.y == goal.y:
             return True
     return False
+
+def run_A_Star(filename):
+    if A_Star(filename) is True:
+        print "yay"
+        print "A* Search:"
+        retrace()
+    else:
+        print "nay"
+
+# True if there is no ghost at x, y
+def no_ghost(x, y, ghost):
+    theres_a_ghost = (x == ghost[0] and y == ghost[1])
+    return not theres_a_ghost
+
+
+def get_neighbors_ghost(x, y, ghost):
+    neighbors = []
+    # find the right neighbor
+    if is_walkable(x+1, y) and is_undiscovered(x+1, y) and no_ghost(x+1, y, ghost):
+        neighbors.append(Point(x+1, y))
+    if is_walkable(x-1, y) and is_undiscovered(x-1, y) and no_ghost(x-1, y, ghost):
+        neighbors.append(Point(x-1, y))
+    if is_walkable(x, y+1) and is_undiscovered(x, y+1) and no_ghost(x, y+1, ghost):
+        neighbors.append(Point(x, y+1))
+    if is_walkable(x, y-1) and is_undiscovered(x, y-1) and no_ghost(x, y-1, ghost):
+        neighbors.append(Point(x, y-1))
+    return neighbors
+
+def A_Star_Ghost(filename):
+    setup(filename)
+    ghost = find("G")
+    dir_ghost = "r"
+    q = Queue.PriorityQueue()
+    q.put((0, start, 0, ghost, dir_ghost))
+
+    nodes_expanded = 0
+    
+    while q.qsize() is not 0:
+        nodes_expanded+=1
+        
+        element = q.get()
+        u = element[1] #dequeue
+        distance_travelled =  element[2] + 1
+        ghost = element[3]
+        ghost_dir = element[4]
+
+        # Move the ghost
+        x = ghost[0]
+        y = ghost[1]
+
+        if dir_ghost == 'r':
+            if is_walkable(x+1, y):
+                ghost = (x+1, y)
+        else:
+            dir_ghost = 'l'
+            ghost = (x-1, y)
+            
+        if dir_ghost == 'l':
+            if is_walkable(x-1, y):
+                ghost = (x-1, y)
+        else:
+            dir_ghost = 'r'
+            ghost = (x+1, y)
+
+        # for all neighbors: 1. adjacent, 2. unexplored
+        # note + tuple() creates a deep copy, which we need to preserve state
+        # same with the string
+        for neighbor in get_neighbors_ghost(u.x,u.y, ghost):
+            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+            set_parent(neighbor, u)
+            make_discovered(u.x,u.y)
+
+        if u.x == goal.x and u.y == goal.y:
+            print "NODES EXPANDED: %s" % nodes_expanded
+            return True
+    return False
+
+def run_A_Star_Ghost(filename):
+    if A_Star_Ghost(filename) is True:
+        print "yay"
+        print "A* Search WITH ghost:"
+        retrace()
+    else:
+        print "nay"
+
+def A_Star_Hardmode_Ghost(filename):
+    setup(filename)
+    ghost = find("G")
+    dir_ghost = "r"
+    q = Queue.PriorityQueue()
+    q.put((0, start, 0, ghost, dir_ghost))
+
+    nodes_expanded = 0
+    
+    while q.qsize() is not 0:
+        nodes_expanded+=1
+        
+        element = q.get()
+        u = element[1] #dequeue
+        distance_travelled =  element[2] + 1
+        ghost = element[3]
+        ghost_dir = element[4]
+
+        # Move the ghost
+        # In this implementation, the ghost chases pacman 
+        ghost_neighbors = get_neighbors(ghost[0], ghost[1])
+        min_distance = sys.maxint
+        min_neighbor = ghost_neighbors[0]
+        for neighbor in ghost_neighbors:
+            if manhattan_distance(neighbor, u) < min_distance:
+                min_distance = manhattan_distance(neighbor, u)
+                min_neighbor = neighbor
+
+        ghost = min_neighbor        
+        
+        # for all neighbors: 1. adjacent, 2. unexplored
+        # note + tuple() creates a deep copy, which we need to preserve state
+        # same with the string
+        for neighbor in get_neighbors_ghost(u.x,u.y, ghost):
+            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+            set_parent(neighbor, u)
+            make_discovered(u.x,u.y)
+
+        if u.x == goal.y and u.y == goal.y:
+            print "NODES EXPANDED: %s" % nodes_expanded
+            return True
+        
+    return False
+
+def run_A_Star_Hardmode_Ghost(filename):
+    if A_Star_Hardmode_Ghost(filename) is True:
+        print "yay"
+        print "A* Search WITH ghost:"
+        retrace()
+    else:
+        print "nay"
+
 
 def A_Star_with_turns(filename, alternate_scheme, alternate_heuristic):
     # alternate_scheme and alternate_heuristic are false by default, used for problem 1.2
@@ -468,7 +622,12 @@ def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristi
 run_A_Star("smallmaze.txt", True, 2)
 
 #run_A_Star("maze.txt", True)
+#run_A_Star("bigmaze_for_turns.txt", True, 2)
+#run_A_Star("maze.txt", False)
 
+#run_BFS("maze.txt")
+
+run_A_Star_Hardmode_Ghost("ghostbig.txt")
 """
 for 1.1:
 (open) maze.txt
