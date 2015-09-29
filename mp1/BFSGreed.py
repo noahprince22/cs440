@@ -535,6 +535,7 @@ def A_Star_Ghost(filename):
             make_discovered(u.x,u.y)
 
         if u.x == goal.x and u.y == goal.y:
+            print "Cost is..: %s" % distance_travelled
             print "NODES EXPANDED: %s" % nodes_expanded
             return True
     return False
@@ -651,10 +652,10 @@ def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristi
 #run_A_Star("smallmaze.txt", True, 2)
 
 #run_A_Star("bigmaze_for_turns.txt", True, 2, True)
-run_A_Star("bigmaze_for_turns.txt", True, 2, True)
+#run_A_Star("bigmaze_for_turns.txt", True, 2, True)
 #run_BFS("maze.txt")
 
-run_A_Star_Hardmode_Ghost("ghostmedium.txt")
+run_A_Star_Ghost("ghostmedium.txt")
 """
 for 1.1:
 (open) maze.txt
