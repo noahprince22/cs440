@@ -502,6 +502,8 @@ def no_ghost(x, y, ghost):
     return not theres_a_ghost
 
 
+# Gets neighbors to a node at x,y that aren't walls, ghosts, or explored
+#   special case when pacman is cornered by a ghost and it retreats to the parent
 def get_neighbors_ghost(x, y, ghost):
     neighbors = []
     # find the right neighbor
@@ -539,8 +541,9 @@ def A_Star_Ghost(filename):
     while q.qsize() is not 0:
         nodes_expanded += 1
 
+        # Get ghost state, node, and distance traveled for this part of the frontier
         element = q.get()
-        u = element[1]  # dequeue
+        u = element[1]  
         distance_travelled = element[2] + 1
         ghost = element[3]
         ghost_dir = element[4]
@@ -563,7 +566,7 @@ def A_Star_Ghost(filename):
             dir_ghost = 'r'
             ghost = (x + 1, y)
 
-        # for all neighbors: 1. adjacent, 2. unexplored
+        # For all neighbors that aren't walls, ghosts, or discovered
         # note + tuple() creates a deep copy, which we need to preserve state
         # same with the string
         for neighbor in get_neighbors_ghost(u.x, u.y, ghost):
@@ -618,7 +621,7 @@ def A_Star_Hardmode_Ghost(filename):
 
         ghost = min_neighbor
 
-        # for all neighbors: 1. adjacent, 2. unexplored
+        # For all neighbors that aren't walls, ghosts, or discovered
         # note + tuple() creates a deep copy, which we need to preserve state
         # same with the string
         for neighbor in get_neighbors_ghost(u.x, u.y, ghost):
