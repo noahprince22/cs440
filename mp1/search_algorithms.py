@@ -3,6 +3,7 @@ import sys
 import Queue
 import numpy
 import math
+
 logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
 # logging: log events for debugging and review, NOT for final output
 
@@ -21,7 +22,8 @@ Point = collections.namedtuple('Point', 'x y')
 
 logging.basicConfig(filename='happenings.log', level=logging.DEBUG)
 
-def anyone_home_at(x,y):
+
+def anyone_home_at(x, y):
     """
     :param x: int
     :param y: int
@@ -33,16 +35,18 @@ def anyone_home_at(x,y):
         return False
     return True
 
+
 def find(char):
     """
     :param char: string, ex: "P", "."
     :return: tuple (x, y), corresponding to node in maze 2-d array
     """
-    for y in range(1,maze_height):
-        for x in range(1,maze_width):
+    for y in range(1, maze_height):
+        for x in range(1, maze_width):
             if maze[y][x] is char:
-                return Point(x,y)
+                return Point(x, y)
                 # "+1" accounting for x,y starting at 0
+
 
 def is_walkable(x, y):
     """
@@ -50,13 +54,15 @@ def is_walkable(x, y):
     :param y: int
     :return: boolean
     """
-    
-    if anyone_home_at(x,y) == False:
+
+    if anyone_home_at(x, y) == False:
         return False
-    
-    if maze[y][x] in [' ','.','P', 'G', 'g']:
+
+    if maze[y][x] in [' ', '.', 'P', 'G', 'g']:
         return True
-    else: return False
+    else:
+        return False
+
 
 def is_undiscovered(x, y):
     """
@@ -69,6 +75,7 @@ def is_undiscovered(x, y):
     else:
         return False
 
+
 def make_discovered(x, y):
     """
     :param x: int
@@ -76,6 +83,7 @@ def make_discovered(x, y):
     :return: nothing; manipulates global object
     """
     discovered_maze[y][x] = True
+
 
 def get_neighbors(x, y):
     """
@@ -85,15 +93,16 @@ def get_neighbors(x, y):
     """
     neighbors = []
     # find the right neighbor
-    if is_walkable(x+1, y) and is_undiscovered(x+1, y):
-        neighbors.append(Point(x+1, y))
-    if is_walkable(x-1, y) and is_undiscovered(x-1, y):
-        neighbors.append(Point(x-1, y))
-    if is_walkable(x, y+1) and is_undiscovered(x, y+1):
-        neighbors.append(Point(x, y+1))
-    if is_walkable(x, y-1) and is_undiscovered(x, y-1):
-        neighbors.append(Point(x, y-1))
+    if is_walkable(x + 1, y) and is_undiscovered(x + 1, y):
+        neighbors.append(Point(x + 1, y))
+    if is_walkable(x - 1, y) and is_undiscovered(x - 1, y):
+        neighbors.append(Point(x - 1, y))
+    if is_walkable(x, y + 1) and is_undiscovered(x, y + 1):
+        neighbors.append(Point(x, y + 1))
+    if is_walkable(x, y - 1) and is_undiscovered(x, y - 1):
+        neighbors.append(Point(x, y - 1))
     return neighbors
+
 
 def set_parent(child, parent):
     """
@@ -106,12 +115,14 @@ def set_parent(child, parent):
     parents_maze[child.y][child.x] = parent
     # parents_maze[y][x] = parent <-- less confuzzling
 
+
 def manhattan_distance(begin, end):
     x = abs(begin.x - end.y)
     y = abs(begin.y - end.y)
     return (x + y)
 
-def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0):
+
+def penalty(walking_to, walking_from, initial_orientation, alternate_scheme=0):
     # when alternate_scheme is 0: move forward cost si 1, turn cost is 1
     # when alternate_scheme is 1: move forward cost is 1, turn cost is 2
     # when alternate_scheme is 2: move forward cost is 2, turn cost is 1
@@ -121,6 +132,7 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0)
     :param initial_orientation: string in ["L", "R", "U", "D"]
     :return: int i: 1 <= i <= 3
     """
+
     def where_you_walking(walking_to, walking_from):
         """
         :param walking_to: tuple (x, y)
@@ -139,6 +151,7 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0)
         elif vector == (0, -1):
             direction = "D"
         return direction
+
     # inner functions ^ v
     def how_many_turns(start_orientation, end_orientation):
         """
@@ -146,64 +159,73 @@ def penalty(walking_to, walking_from, initial_orientation, alternate_scheme = 0)
         :param end_orientation: string: ^ ^ ^ ^
         :return: tuple, (int, string). Int: 0 <= i <= 2. String in ["L","R","U","D"]
         """
-        if start_orientation not in ["L","R","U","D"] or end_orientation not in ["L","R","U","D"]:
+        if start_orientation not in ["L", "R", "U", "D"] or end_orientation not in ["L", "R", "U", "D"]:
             print "ORIENTATION ERROR"
             return 1
         else:
             if start_orientation is end_orientation:
                 # already facing the right way, so no turns
                 return 0
-            elif (start_orientation in ["L", "R"] and end_orientation in ["U", "D"]) or (start_orientation in ["U", "D"] and end_orientation in ["L", "R"]):
+            elif (start_orientation in ["L", "R"] and end_orientation in ["U", "D"]) or (
+                    start_orientation in ["U", "D"] and end_orientation in ["L", "R"]):
                 # 90 deg turn
                 return 1
-            elif start_orientation is not end_orientation and ((start_orientation in ["L", "R"] and end_orientation in ["L", "R"]) or (start_orientation in ["U", "D"] and end_orientation in ["U", "D"])):
+            elif start_orientation is not end_orientation and (
+                (start_orientation in ["L", "R"] and end_orientation in ["L", "R"]) or (
+                    start_orientation in ["U", "D"] and end_orientation in ["U", "D"])):
                 # 180 deg turn
                 return 2
             else:
                 print "Weird error at how_many_turns. Check, check it out. This shouldn't be happening."
                 return 0
+
     # -------- back to main function
     new_direction = where_you_walking(walking_to, walking_from)
     turns = how_many_turns(initial_orientation, new_direction)
     if alternate_scheme == 0:
-        #sys.stdout.write(str(turns + 1))
+        # sys.stdout.write(str(turns + 1))
         return turns + 1, new_direction
     elif alternate_scheme == 1:
-        #sys.stdout.write(str(turns + 2))
+        # sys.stdout.write(str(turns + 2))
         return turns + 2, new_direction
     elif alternate_scheme == 2:
-        #sys.stdout.write(str(2*turns + 1))
-        return 2*turns + 1, new_direction
+        # sys.stdout.write(str(2*turns + 1))
+        return 2 * turns + 1, new_direction
     else:
         print "ERROR. Don't be dumb. Check the penalty function."
-    # 1 point penalty per turn, so no need to modify.
+        # 1 point penalty per turn, so no need to modify.
+
 
 def get_wall_density():
     total = 0
     for y in maze:
         for x in y:
             if x in ["%", "G", "g"]:
-                total+=1
+                total += 1
 
-    return float(total)/(maze_width * maze_height)
+    return float(total) / (maze_width * maze_height)
 
-def get_wall_density(start_vertex, goal_vertex):
+
+def wall_density_heuristic(start, goal):
     """
     :param start_vertex: Point namedtuple
     :param goal_vertex: Point namedtuple
     :return: float
     """
     total = 0
-    for y in range(start_vertex.y, goal_vertex.y):
-        for x in range(start_vertex.x, goal_vertex.x):
+
+    for y in range(min(start.y, goal.y), max(start.y, goal.y)):
+        for x in range(min(start.x, goal.x), max(start.x, goal.x)):
             if maze[y][x] is "%":
-                total+=1
-    area = abs((start_vertex.y - goal_vertex.y) * (start_vertex.x * goal_vertex.x))
+                total += 1
+
+    area = abs((start.y - goal.y) * (start.x - goal.x))
     if area is not 0:
         print float(total) / area
         return float(total) / area
     else:
         return 0
+
 
 def setup(filename):
     """
@@ -218,22 +240,23 @@ def setup(filename):
     global maze_walkable_bool
     global discovered_maze
     global parents_maze
-    global turn_penalty_maze # used for debugging
-    global direction_maze # used for debugging
-    global distance_maze # used for debugging
+    global turn_penalty_maze  # used for debugging
+    global direction_maze  # used for debugging
+    global distance_maze  # used for debugging
     maze = [list(char for char in line.rstrip('\n')) for line in open(filename)]
     maze_width = len(maze[0])
     maze_height = len(maze)
     start = find("P")
     goal = find(".")
-    maze_walkable_bool = [[is_walkable(x, y) for x in range(0,maze_width)] for y in range(0,maze_height)]
-    discovered_maze = [[False for x in range(0,maze_width)] for y in range(0,maze_height)]
-    parents_maze = [[None for x in range(0,maze_width)] for y in range(0,maze_height)]
-    turn_penalty_maze = [[0 for x in range(0,maze_width)] for y in range(0,maze_height)]
-    direction_maze = [[None for x in range(0,maze_width)] for y in range(0,maze_height)]
-    distance_maze = [[0 for x in range(0,maze_width)] for y in range(0,maze_height)]
+    maze_walkable_bool = [[is_walkable(x, y) for x in range(0, maze_width)] for y in range(0, maze_height)]
+    discovered_maze = [[False for x in range(0, maze_width)] for y in range(0, maze_height)]
+    parents_maze = [[None for x in range(0, maze_width)] for y in range(0, maze_height)]
+    turn_penalty_maze = [[0 for x in range(0, maze_width)] for y in range(0, maze_height)]
+    direction_maze = [[None for x in range(0, maze_width)] for y in range(0, maze_height)]
+    distance_maze = [[0 for x in range(0, maze_width)] for y in range(0, maze_height)]
 
-def retrace(turns = False):
+
+def retrace(turns=False):
     # trace way home
     # add goal to path (list)
     # while last item of path (list) is not start...
@@ -249,16 +272,16 @@ def retrace(turns = False):
 
     for y in range(0, maze_height):
         for x in range(0, maze_width):
-            if is_walkable(x,y) is False:
+            if is_walkable(x, y) is False:
                 sys.stdout.write("%")
-            elif is_undiscovered(x,y) is True:
+            elif is_undiscovered(x, y) is True:
                 sys.stdout.write(" ")
             else:
                 sys.stdout.write(".")
                 number_of_expanded_nodes += 1
         sys.stdout.write("\n")
 
-    cost = len(path) # may or may not include turn costs depending on context
+    cost = len(path)  # may or may not include turn costs depending on context
     print "Cost: " + str(cost)
     # this Cost printed is the path cost, independent of turn cost
 
@@ -267,15 +290,15 @@ def retrace(turns = False):
     print "-" * maze_width
 
     print "... BUT THERE IS BUT ONE TRUE PATH!!!"
-    
+
     cost = 0
     for y in range(0, maze_height):
         for x in range(0, maze_width):
-            if is_walkable(x,y) is False:
+            if is_walkable(x, y) is False:
                 sys.stdout.write("%")
             elif (x, y) in path:
                 sys.stdout.write(".")
-                cost+=1
+                cost += 1
             else:
                 sys.stdout.write(" ")
         sys.stdout.write("\n")
@@ -289,11 +312,11 @@ def retrace(turns = False):
 
         for y in range(0, maze_height):
             for x in range(0, maze_width):
-                if is_walkable(x,y) is False:
+                if is_walkable(x, y) is False:
                     sys.stdout.write("%")
                 elif (x, y) in path:
-                #elif turn_penalty_maze[y][x] > 0:
-                    penalty = turn_penalty_maze[y][x] # completely local
+                    # elif turn_penalty_maze[y][x] > 0:
+                    penalty = turn_penalty_maze[y][x]  # completely local
                     sys.stdout.write(str(penalty))
                     cost += penalty
                 else:
@@ -308,14 +331,15 @@ def retrace(turns = False):
 
         for y in range(0, maze_height):
             for x in range(0, maze_width):
-                if is_walkable(x,y) is False:
+                if is_walkable(x, y) is False:
                     sys.stdout.write("%")
-                #elif direction_maze[y][x] is not None:
+                # elif direction_maze[y][x] is not None:
                 elif (x, y) in path:
                     sys.stdout.write(direction_maze[y][x])
                 else:
                     sys.stdout.write(" ")
             sys.stdout.write("\n")
+
 
 def DFS(filename):
     setup(filename)
@@ -324,20 +348,21 @@ def DFS(filename):
 
     num_expanded = 0
     while s.qsize() is not 0:
-        num_expanded+=1
-        u = s.get() #dequeue
-        
+        num_expanded += 1
+        u = s.get()  # dequeue
+
         # for all neighbors: 1. adjacent, 2. unexplored
-        for neighbor in get_neighbors(u.x,u.y):
+        for neighbor in get_neighbors(u.x, u.y):
             s.put(neighbor)
             set_parent(neighbor, u)
-        make_discovered(u.x,u.y)
+        make_discovered(u.x, u.y)
 
         if u.x == goal.x and u.y == goal.y:
             print "Expanded %s" % num_expanded
             return True
 
     return False
+
 
 def run_DFS(filename):
     if DFS(filename) is True:
@@ -346,7 +371,8 @@ def run_DFS(filename):
         print "Depth-First Search:"
     else:
         print "nay"
-        
+
+
 def BFS(filename):
     setup(filename)
     q = Queue.Queue()
@@ -354,19 +380,20 @@ def BFS(filename):
 
     num_expanded = 0
     while q.qsize() is not 0:
-        num_expanded+=1
-        u = q.get() #dequeue
+        num_expanded += 1
+        u = q.get()  # dequeue
 
         # for all neighbors: 1. adjacent, 2. unexplored
-        for neighbor in get_neighbors(u.x,u.y):
+        for neighbor in get_neighbors(u.x, u.y):
             q.put(neighbor)
             set_parent(neighbor, u)
-        make_discovered(u.x,u.y)
+        make_discovered(u.x, u.y)
 
         if u.x == goal.x and u.y == goal.y:
             print "Expanded %s" % num_expanded
             return True
     return False
+
 
 def run_BFS(filename):
     if BFS(filename) is True:
@@ -376,6 +403,7 @@ def run_BFS(filename):
     else:
         print "nay"
 
+
 def Greedy(filename):
     setup(filename)
     q = Queue.PriorityQueue()
@@ -383,20 +411,21 @@ def Greedy(filename):
 
     num_expanded = 0
     while q.qsize() is not 0:
-        num_expanded+=1
-        u = q.get()[1] #dequeue
+        num_expanded += 1
+        u = q.get()[1]  # dequeue
         # dequeue. u := Currently selected node
 
         # for all neighbors: 1. adjacent, 2. unexplored
         for neighbor in get_neighbors(u.x, u.y):
-            q.put( (manhattan_distance(neighbor, goal), neighbor) )
+            q.put((manhattan_distance(neighbor, goal), neighbor))
             set_parent(neighbor, u)
-        make_discovered(u.x,u.y)
+        make_discovered(u.x, u.y)
 
         if u.x == goal.x and u.y == goal.y:
             print "Expanded %s" % num_expanded
             return True
     return False
+
 
 def Greedy_with_turns(filename):
     setup(filename)
@@ -412,7 +441,7 @@ def Greedy_with_turns(filename):
         # for all neighbors: 1. adjacent, 2. unexplored
         for neighbor in get_neighbors(u.x, u.y):
             turn_penalty, new_orientation = penalty(u, neighbor, old_orientation)
-            q.put( ((manhattan_distance(neighbor, goal) + turn_penalty), neighbor, new_orientation) )
+            q.put(((manhattan_distance(neighbor, goal) + turn_penalty), neighbor, new_orientation))
             set_parent(neighbor, u)
         make_discovered(u.x, u.y)
 
@@ -421,7 +450,8 @@ def Greedy_with_turns(filename):
             return True
     return False
 
-def run_Greedy(filename, turns = False):
+
+def run_Greedy(filename, turns=False):
     if turns is True:
         Greedy_with_turns(filename)
         print "Turn Penalty On"
@@ -430,7 +460,8 @@ def run_Greedy(filename, turns = False):
     print "Greedy Best-First Search:"
     retrace()
 
-def A_Star(filename):
+
+def A_Star(filename, alternate_heuristic):
     setup(filename)
     q = Queue.PriorityQueue()
     q.put((0, start, 0))
@@ -439,11 +470,15 @@ def A_Star(filename):
     while q.qsize() is not 0:
         next_up = q.get()
         u = next_up[1]
-        distance_travelled = next_up[2] + 1 # distance_travelled is node-specific
+        distance_travelled = next_up[2] + 1  # distance_travelled is node-specific
 
         # for all neighbors: 1. adjacent, 2. unexplored
         for neighbor in get_neighbors(u.x, u.y):
-            q.put((manhattan_distance(neighbor, goal) + distance_travelled, neighbor, distance_travelled))
+            if alternate_heuristic is False:
+                q.put((manhattan_distance(neighbor, goal) + distance_travelled, neighbor, distance_travelled))
+            else:  # else alternate_heuristic is True, then use different heuristic from the Manhattan distance once
+                q.put(((wall_density_heuristic(neighbor, goal)) * (manhattan_distance(neighbor, goal) + distance_travelled),
+                       neighbor, distance_travelled))
             set_parent(neighbor, u)
         make_discovered(u.x, u.y)
 
@@ -451,13 +486,15 @@ def A_Star(filename):
             return True
     return False
 
-def run_A_Star(filename):
-    if A_Star(filename) is True:
+
+def run_A_Star(filename, alternate_heuristic=False):
+    if A_Star(filename, altnerate_heuristic) is True:
         print "yay"
         print "A* Search:"
         retrace()
     else:
         print "nay"
+
 
 # True if there is no ghost at x, y
 def no_ghost(x, y, ghost):
@@ -486,8 +523,9 @@ def get_neighbors_ghost(x, y, ghost):
                 discovered_maze[y][x] = False
                 # Go back to my parent
                 return [parent]
-        
+
     return neighbors
+
 
 def A_Star_Ghost(filename):
     setup(filename)
@@ -497,13 +535,13 @@ def A_Star_Ghost(filename):
     q.put((0, start, 0, ghost, dir_ghost))
 
     nodes_expanded = 0
-    
+
     while q.qsize() is not 0:
-        nodes_expanded+=1
-        
+        nodes_expanded += 1
+
         element = q.get()
-        u = element[1] #dequeue
-        distance_travelled =  element[2] + 1
+        u = element[1]  # dequeue
+        distance_travelled = element[2] + 1
         ghost = element[3]
         ghost_dir = element[4]
 
@@ -512,33 +550,34 @@ def A_Star_Ghost(filename):
         y = ghost[1]
 
         if dir_ghost == 'r':
-            if is_walkable(x+1, y):
-                ghost = (x+1, y)
+            if is_walkable(x + 1, y):
+                ghost = (x + 1, y)
         else:
             dir_ghost = 'l'
-            ghost = (x-1, y)
-            
+            ghost = (x - 1, y)
+
         if dir_ghost == 'l':
-            if is_walkable(x-1, y):
-                ghost = (x-1, y)
+            if is_walkable(x - 1, y):
+                ghost = (x - 1, y)
         else:
             dir_ghost = 'r'
-            ghost = (x+1, y)
+            ghost = (x + 1, y)
 
         # for all neighbors: 1. adjacent, 2. unexplored
         # note + tuple() creates a deep copy, which we need to preserve state
         # same with the string
-        for neighbor in get_neighbors_ghost(u.x,u.y, ghost):
-            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
-                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+        for neighbor in get_neighbors_ghost(u.x, u.y, ghost):
+            q.put((manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                   distance_travelled, ghost + tuple(), dir_ghost + ""))
             set_parent(neighbor, u)
-            make_discovered(u.x,u.y)
+            make_discovered(u.x, u.y)
 
         if u.x == goal.x and u.y == goal.y:
             print "Cost is..: %s" % distance_travelled
             print "NODES EXPANDED: %s" % nodes_expanded
             return True
     return False
+
 
 def run_A_Star_Ghost(filename):
     if A_Star_Ghost(filename) is True:
@@ -548,6 +587,7 @@ def run_A_Star_Ghost(filename):
     else:
         print "nay"
 
+
 def A_Star_Hardmode_Ghost(filename):
     setup(filename)
     ghost = find("G")
@@ -556,13 +596,13 @@ def A_Star_Hardmode_Ghost(filename):
     q.put((0, start, 0, ghost, dir_ghost))
 
     nodes_expanded = 0
-    
+
     while q.qsize() is not 0:
-        nodes_expanded+=1
-        
+        nodes_expanded += 1
+
         element = q.get()
-        u = element[1] #dequeue
-        distance_travelled =  element[2] + 1
+        u = element[1]  # dequeue
+        distance_travelled = element[2] + 1
         ghost = element[3]
         ghost_dir = element[4]
 
@@ -576,22 +616,23 @@ def A_Star_Hardmode_Ghost(filename):
                 min_distance = manhattan_distance(neighbor, u)
                 min_neighbor = neighbor
 
-        ghost = min_neighbor        
-        
+        ghost = min_neighbor
+
         # for all neighbors: 1. adjacent, 2. unexplored
         # note + tuple() creates a deep copy, which we need to preserve state
         # same with the string
-        for neighbor in get_neighbors_ghost(u.x,u.y, ghost):
-            q.put( (manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
-                    distance_travelled, ghost + tuple(), dir_ghost + ""))
+        for neighbor in get_neighbors_ghost(u.x, u.y, ghost):
+            q.put((manhattan_distance(neighbor, goal) + distance_travelled, neighbor,
+                   distance_travelled, ghost + tuple(), dir_ghost + ""))
             set_parent(neighbor, u)
-            make_discovered(u.x,u.y)
+            make_discovered(u.x, u.y)
 
         if u.x == goal.y and u.y == goal.y:
             print "NODES EXPANDED: %s" % nodes_expanded
             return True
-        
+
     return False
+
 
 def run_A_Star_Hardmode_Ghost(filename):
     if A_Star_Hardmode_Ghost(filename) is True:
@@ -616,7 +657,7 @@ def A_Star_with_turns(filename, alternate_scheme, alternate_heuristic):
         u = next_up[1]
         old_orientation = next_up[2]
 
-        #distance_travelled = distance_travelled + 1
+        # distance_travelled = distance_travelled + 1
         distance_travelled = next_up[3] + 1
 
         if u.x == goal.x and u.y == goal.y:
@@ -626,34 +667,39 @@ def A_Star_with_turns(filename, alternate_scheme, alternate_heuristic):
         for neighbor in get_neighbors(u.x, u.y):
             turn_penalty, new_orientation = penalty(u, neighbor, old_orientation, alternate_scheme)
             if alternate_heuristic is False:
-                q.put( (manhattan_distance(neighbor, goal) + distance_travelled + turn_penalty, neighbor, new_orientation, distance_travelled))
-            else: # else alternate_heuristic is True, then use different heuristic from the Manhattan distance once
-                q.put( ( 2*(get_wall_density(neighbor, goal))*(manhattan_distance(neighbor, goal) + distance_travelled) + turn_penalty, neighbor, new_orientation, distance_travelled))
+                q.put((
+                      manhattan_distance(neighbor, goal) + distance_travelled + turn_penalty, neighbor, new_orientation,
+                      distance_travelled))
+            else:  # else alternate_heuristic is True, then use different heuristic from the Manhattan distance once
+                q.put(((wall_density_heuristic(neighbor, goal)) * (
+                manhattan_distance(neighbor, goal) + distance_travelled) + turn_penalty, neighbor, new_orientation,
+                       distance_travelled))
             set_parent(neighbor, u)
             turn_penalty_maze[u.y][u.x] = turn_penalty
             direction_maze[neighbor.y][neighbor.x] = new_orientation
         make_discovered(u.x, u.y)
     return False
 
-def run_A_Star(filename, turns = False, alternate_scheme = 0, alternate_heuristic = False):
+
+def run_A_Star(filename, turns=False, alternate_scheme=0, alternate_heuristic=False):
     print "A* Search:"
     if turns is True:
         A_Star_with_turns(filename, alternate_scheme, alternate_heuristic)
         print "Turn Penalty On"
         retrace(True)
     else:
-        A_Star(filename)
+        A_Star(filename, alternate_heuristic)
         retrace(False)
 
-#run_Greedy("maze.txt", False)
-#run_Greedy("maze.txt", True)
 
-#run_A_Star("smallmaze.txt", True, 1, False)
-#run_A_Star("smallmaze.txt", True, 2)
+# run_Greedy("maze.txt", False)
+# run_Greedy("maze.txt", True)
 
 #run_A_Star("bigmaze_for_turns.txt", True, 2, True)
 #run_A_Star("bigmaze_for_turns.txt", True, 2, True)
 #run_BFS("maze.txt")
+# run_A_Star("smallmaze.txt", True, 1, False)
+# run_A_Star("smallmaze.txt", True, 2)
 
 run_A_Star_Ghost("ghostmedium.txt")
 """
@@ -668,10 +714,6 @@ bigmaze_for_turns.txt
 
 USE THE RIGHT INPUT
 """
-
-
-
-
 
 """
 1801L1;tCL1;1CCLLLtfifLtt11CC;iCG0L1t1GL;Lf;i11ffCCCf0L;t1fGtfLf1CC;ffCftLC1tG11tCCfCCffGCt11Cft1Cftti1LL1t1fi;iLi:1Lt11fCLi11tfttfCfCLttf1t1:tt
